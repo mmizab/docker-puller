@@ -7,34 +7,28 @@ import subprocess
 app = Flask(__name__)
 config = None
 
-
-@app.route('/help')
-def help():
-    token = request.args.get('token')
-    return jsonify(success=token), 200
-
-
-@app.route('/')
+@app.route('/', methods=['POST'])
 def hook_listen():
-    token = request.args.get('token')
-    if token == config['token']:
-        hook = request.args.get('hook')
+    if request.method == 'POST':
+        token = request.args.get('token')
+        if token == config['token']:
+            hook = request.args.get('hook')
 
-        if hook:
-            hook_value = config['hooks'].get(hook)
+            if hook:
+                hook_value = config['hooks'].get(hook)
 
-            if hook_value:
-                try:
-                    subprocess.call(hook_value)
-                    return jsonify(success=True), 200
-                except OSError as e:
-                    return jsonify(success=False, error=str(e)), 400
+                if hook_value:
+                    try:
+                        subprocess.call(hook_value)
+                        return jsonify(success=True), 200
+                    except OSError as e:
+                        return jsonify(success=False, error=str(e)), 400
+                else:
+                    return jsonify(success=False, error="Hook not found"), 404
             else:
-                return jsonify(success=False, error="Hook not found"), 404
+                return jsonify(success=False, error="Invalid request: missing hook"), 400
         else:
-            return jsonify(success=False, error="Invalid request: missing hook"), 400
-    else:
-        return jsonify(success=False, error="Invalid token"), 400
+            return jsonify(success=False, error="Invalid token"), 400
 
 def load_config():
     with open('config.json') as config_file:    
@@ -42,4 +36,4 @@ def load_config():
 
 if __name__ == '__main__':
     config = load_config()
-    app.run(host=config.get('host', '0.0.0.0'), port=config.get('port', 8000))
+    app.run(host=config.get('host', 'localhost'), port=config.get('port', 8000))
